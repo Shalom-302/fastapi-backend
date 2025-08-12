@@ -89,6 +89,78 @@ app.endpoints    # Restapi endpoints files
 
 ```
 
+## Graphe de dépendances fonctionnelles
+
+Ce graphe montre comment les différents modules du code interagissent les uns avec les autres. Il illustre la séparation des responsabilités et le flux de contrôle au sein de l'application backend.
+
+```mermaid
+graph TD
+    subgraph "Couche Présentation (API)"
+        A["main.py (Point d'entrée)"]
+        B["Middlewares"]
+        C["API Endpoints (Routeurs)"]
+    end
+
+    subgraph "Couche Métier (Logique)"
+        D["Services (Logique Métier)"]
+    end
+
+    subgraph "Couche d'Accès aux Données (DAL)"
+        E["CRUD (Opérations BDD)"]
+        F["Schemas (Modèles Pydantic)"]
+        G["Models (Modèles SQLAlchemy)"]
+    end
+
+    subgraph "Modules de Support"
+        H["Core (Configuration, Sécurité)"]
+        I["Database (Gestion de session BDD)"]
+        J["Common (Utilitaires, Exceptions)"]
+    end
+
+    %% Définition des dépendances
+    A --> B;
+    A --> C;
+
+    B --> H;
+    B --> J;
+
+    C --> D;
+    C --> F;
+    C --> I;
+
+    D --> E;
+    D --> F;
+    D --> G;
+    D --> J;
+
+    E --> G;
+    E --> I;
+```
+
+### Explication du Graphe de Dépendances :
+
+Ce graphe illustre une architecture en couches (layered architecture), qui est une pratique très courante pour organiser le code de manière claire et maintenable.
+
+1.  **Flux de la requête (de haut en bas)** :
+    *   Le point d'entrée (`main.py`) initialise l'application, en chargeant les **Middlewares** et les **API Endpoints**.
+    *   Les **Endpoints** (la couche API) reçoivent les requêtes HTTP. Leur rôle est de valider les données d'entrée (en utilisant les **Schemas Pydantic**) et d'appeler la couche de service appropriée pour traiter la requête. Ils ne contiennent aucune logique métier.
+    *   Les **Services** contiennent toute la **logique métier**. Par exemple, "comment créer un nouvel utilisateur" ou "quelles vérifications faire avant de mettre à jour un produit". C'est le cœur de l'application.
+    *   Pour interagir avec la base de données, les services utilisent la couche **CRUD** (Create, Read, Update, Delete).
+
+2.  **Couches et leurs Rôles** :
+    *   **Couche Présentation (API)** : Responsable de la communication avec le client (navigateur, autre service). Elle gère les requêtes et les réponses HTTP.
+    *   **Couche Métier (Services)** : Contient la logique et les règles de l'application. Elle orchestre les opérations en faisant appel à la couche d'accès aux données.
+    *   **Couche d'Accès aux Données (DAL)** : Responsable de toute interaction avec la base de données.
+        *   **CRUD** : Contient les fonctions qui exécutent les requêtes SQL (par exemple, `SELECT`, `INSERT`, `UPDATE`).
+        *   **Models** : Définit la structure des tables de la base de données via l'ORM SQLAlchemy.
+        *   **Schemas** : Définit la structure des données pour les requêtes et les réponses de l'API (validation).
+
+3.  **Dépendances Fondamentales** :
+    *   La dépendance va toujours dans un sens : **API -> Service -> CRUD**. Une couche inférieure (comme CRUD) ne doit jamais dépendre d'une couche supérieure (comme l'API).
+    *   Les **Modules de Support** (`Core`, `Database`, `Common`) fournissent des fonctionnalités transversales (configuration, sécurité, connexion à la BDD, utilitaires) qui peuvent être utilisées par toutes les autres couches.
+
+Cette structure permet de découpler fortement les différentes parties de l'application. Par exemple, on pourrait changer la base de données (en modifiant la couche CRUD et les Models) sans avoir à toucher à la logique métier ou à l'API.
+
 ## Environmnent variables
 
 To correctly run the project, you will need some environment variables. Expose & import them in core/config.py
